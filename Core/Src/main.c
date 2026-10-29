@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stdio.h"
 #include "adc121s021.h"
 
 /* USER CODE END Includes */
@@ -84,10 +85,25 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 		sample++;
 		if (sample == N) {
 			result = (float)accumulator / N;
+			printf("result: %ld\r\n | value on: %d | value off: %d", (long)result, value_one, value_two);
 			sample = 0;
 			accumulator = 0;
 		}
 	}
+}
+
+int _write(int file, char *ptr, int len)
+{
+    while (HAL_UART_Transmit(&huart2, (uint8_t *)ptr, len, HAL_MAX_DELAY) == HAL_BUSY) { }
+    return len;
+}
+
+void LASER_INIT(void)
+{
+	HAL_TIM_Base_Start(&htim3);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+	HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_1);
+	HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_3);
 }
 
 /* USER CODE END 0 */
@@ -125,10 +141,7 @@ int main(void)
   MX_TIM3_Init();
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start(&htim3);
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
-  HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_1);
-  HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_3);
+  LASER_INIT();
 
   /* USER CODE END 2 */
 
