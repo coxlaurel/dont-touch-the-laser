@@ -55,6 +55,12 @@ volatile uint16_t value_two = 0;
 volatile int32_t accumulator = 0;
 volatile uint16_t sample = 0;
 volatile float result = 0;
+volatile float detection_threshold = 0;
+
+//state machine and flags
+volatile uint8_t calibrate_state = 0;
+volatile uint8_t detected_state = 0;
+volatile uint8_t disarm_alarm = 0;
 
 /* USER CODE END PV */
 
@@ -85,9 +91,24 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 		sample++;
 		if (sample == N) {
 			result = (float)accumulator / N;
+			if (result < detection_threshold) {
+				detected_state = 1;
+			}
 			printf("result: %ld\r\n | value on: %d | value off: %d", (long)result, value_one, value_two);
 			sample = 0;
 			accumulator = 0;
+		}
+	}
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == B1_Pin) {
+		if (calibrate_state == 1) {
+			detection_threshold = result * 0.75;
+			calibrate_state = 0;
+		} else if (detected_state == 1) {
+			disarm_alarm = 1;
 		}
 	}
 }
@@ -104,6 +125,28 @@ void LASER_INIT(void)
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
 	HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_1);
 	HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_3);
+}
+
+void CALIBRATE_INIT(void)
+{
+	calibrate_state = 1;
+	while (detection_threshold == 0){
+		__WFI();
+	}
+}
+
+void ALARM_ON(void)
+{
+	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+}
+
+void DISARM_ALARM(void)
+{
+	if (disarm_alarm == 1){
+		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+		detected_state = 0;
+		disarm_alarm = 0;
+	}
 }
 
 /* USER CODE END 0 */
@@ -142,6 +185,7 @@ int main(void)
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
   LASER_INIT();
+  CALIBRATE_INIT();
 
   /* USER CODE END 2 */
 
@@ -152,7 +196,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//	  ADC121S021_READ(&value_one);
+	  if (detected_state == 1){
+		  ALARM_ON();
+		  DISARM_ALARM();
+	  }
+
   }
   /* USER CODE END 3 */
 }
@@ -374,6 +422,9 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_SET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
@@ -393,6 +444,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(CS_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LED_Pin */
+  GPIO_InitStruct.Pin = LED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
