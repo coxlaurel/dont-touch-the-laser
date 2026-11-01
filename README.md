@@ -28,7 +28,10 @@ Our firmware has quite a few different components (i.e. calibration and alarm ha
 
 ### Reading Values
 
-Our laser signal is read in by the ADC over SPI. We use one timer with 3 channels to drive our laser PWM and then tick on the high and low of the PWM period. We capture the high period sample in $sample_{on}$ and the low sample in $sample_{off}$ during their output capture interrupts.
+Our laser signal is read in by the ADC over SPI. We use one timer with 3 channels to drive our laser PWM and then sample on the high and low of the PWM period. We capture the high period sample in $sample_{on}$ and the low sample in $sample_{off}$ during their output capture interrupts. We observed on an oscilloscope that there is some electrical coupling on the switching edge of the PWM signal. After around a settling time, $t_{settle} = 20 \mu s$, the signal is safe to sample. So timer channels 1 and 3 are configured to fire $5 \mu s$ before each switching edge to make sure that the signal has settled.
+
+<img src="assets/wavedrom.png" width="50%" alt="timers">
+
 
 ### Detection
 
