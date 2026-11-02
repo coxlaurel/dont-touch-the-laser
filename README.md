@@ -50,3 +50,6 @@ In the main while loop, `detected_state` is monitored. When flagged, it moves to
 ## Debugging Experience
 
 Overall, the complexity of our system was quite manageable on the firmware end. There was some trial and error to figuring out what ratio to use for the `calibration_threshold` and the number of accumulated samples. But for coding bugs strictly, early on in development, we ran into a problem where our ADC value only read the `output value`/2. This was a strange bug, because our ADC was reading a signal and was (un)proportionally correct. After looking at our ADC datasheet some more, we found that we needed to send bits on the low edge of the `SCLK`. We fixed this by configuring the SPI setting CLK Polarity to low in CubeMX.
+
+## Disclaimer
+This project was created with assistance from AI tools. Specifically, some ideas about the lock-in detection scheme were generated using an LLM. We have reviewed and edited this work and have retained records of out generative AI use. For more information on the extent and nature of AI usage, please contact the authors.
